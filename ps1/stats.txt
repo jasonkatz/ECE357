@@ -1,0 +1,38 @@
+Run 1: bufSize = 1 byte
+Time taken 1 seconds 130 milliseconds
+
+Run 2: bufSize = 2 bytes
+Time taken 0 seconds 570 milliseconds
+
+Run 3: bufSize = 4 bytes
+Time taken 0 seconds 288 milliseconds
+
+Run 4: bufSize = 8 bytes
+Time taken 0 seconds 146 milliseconds
+
+Run 5: bufSize = 16 bytes
+Time taken 0 seconds 73 milliseconds
+
+Run 6: bufSize = 32 bytes
+Time taken 0 seconds 37 milliseconds
+
+Run 7: bufSize = 64 bytes
+Time taken 0 seconds 21 milliseconds
+
+Run 8: bufSize = 128 bytes
+Time taken 0 seconds 11 milliseconds
+
+Run 9: bufSize = 256 bytes
+Time taken 0 seconds 6 milliseconds
+
+Run 10: bufSize = 512 bytes
+Time taken 0 seconds 3 milliseconds
+
+Run 11: bufSize = 1024 bytes
+Time taken 0 seconds 2 milliseconds
+
+Run 12: bufSize = 2048 bytes
+Time taken 0 seconds 2 milliseconds
+
+Run 13: bufSize = 4096 bytes
+Time taken 0 seconds 1 milliseconds
