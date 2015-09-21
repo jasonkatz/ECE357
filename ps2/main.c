@@ -61,7 +61,7 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
     struct dirent * de;
 
     // Keep track of directories to explore
-    char ** dirArray = (char **)malloc(sizeof(char *));
+    char ** dirArray = malloc(sizeof(char *));
     int dirCount = 0;
     int dirArraySize = 1;
 
@@ -76,7 +76,7 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
             dirArray[dirCount++] = de->d_name;
             if (dirCount == dirArraySize) {
                 dirArraySize *= 2;
-                dirArray = (char **)realloc(dirArray, dirArraySize * sizeof(char *));
+                dirArray = realloc(dirArray, dirArraySize * sizeof(char *));
             }
         }
 
@@ -89,21 +89,19 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
     int i = 0;
     while (i < dirCount) {
         char * tempDirPath = strdup(dirPath);
-        char * tempPath = malloc(sizeof (char) * (strlen(tempDirPath) + strlen(dirArray[i]) + 2));
+        char * tempPath = malloc(sizeof (char) * (strlen(tempDirPath) + strlen(dirArray[i]) + 1));
         tempPath = strcat(tempDirPath, dirArray[i]);
-        //printf("Recursively listing %s\n", dirArray[i]);
         listDir(tempPath, userFilter, timeFilter);
-        //free(tempPath);
 
         ++i;
     }
 
-    closedir(dirp);
-
     // Free dirArray
-    //free(dirArray);
+    free(dirArray);
     dirArray = NULL;
     dirCount = 0;
+
+    closedir(dirp);
 }
 
 void printData(char * dirPath, struct dirent * de, char * userFilter, int * timeFilter) {
