@@ -52,7 +52,7 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
         strcat(dirPath, "/");
     }
 
-    printf("Listing: %s\n", dirPath);
+    //printf("Listing: %s\n", dirPath);
 
     DIR * dirp = opendir(dirPath);
     if (!dirp) {
@@ -60,52 +60,27 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
     }
     struct dirent * de;
 
-    // Keep track of directories to explore
-    char ** dirArray = malloc(sizeof(char *));
-    int dirCount = 0;
-    int dirArraySize = 1;
-
     while (de = readdir(dirp)) {
         // Skip hidden files or directories
         if (de->d_name[0] == '.') {
             continue;
         }
 
-        // Add directories to dirArray
         if (de->d_type == DT_DIR) {
-            dirArray[dirCount++] = de->d_name;
-            if (dirCount == dirArraySize) {
-                dirArraySize *= 2;
-                dirArray = realloc(dirArray, dirArraySize * sizeof(char *));
-            }
+            char tempPath[512];
+            strcpy(tempPath, dirPath);
+            strcat(tempPath, de->d_name);
+            listDir(tempPath, userFilter, timeFilter);
         }
 
         printData(dirPath, de, userFilter, timeFilter);
     }
 
-    printf("\n");
-
-    // Loop through dirArray and listDir for each one
-    int i = 0;
-    while (i < dirCount) {
-        char * tempDirPath = strdup(dirPath);
-        char * tempPath = malloc(sizeof (char) * (strlen(tempDirPath) + strlen(dirArray[i]) + 1));
-        tempPath = strcat(tempDirPath, dirArray[i]);
-        listDir(tempPath, userFilter, timeFilter);
-
-        ++i;
-    }
-
-    // Free dirArray
-    free(dirArray);
-    dirArray = NULL;
-    dirCount = 0;
-
     closedir(dirp);
 }
 
 void printData(char * dirPath, struct dirent * de, char * userFilter, int * timeFilter) {
-    char * path = malloc(strlen(dirPath) + strlen(de->d_name) + 1);
+    char path[512];
     strcpy(path, dirPath);
     strcat(path, de->d_name);
 
@@ -142,7 +117,7 @@ void printData(char * dirPath, struct dirent * de, char * userFilter, int * time
 
     // Print link contents if symlink
     if (getType(sb) == 'l') {
-        char * buf = malloc(256);
+        char buf[256];
         if (readlink(path, buf, 256) == -1) {
             printf("\nreadlink failed: %s\n", strerror(errno));
             exit(1);
