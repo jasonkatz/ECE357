@@ -11,23 +11,29 @@
 #include <grp.h>
 #include <time.h>
 
-void listDir(char * filePath);
-void printData(char * dirPath, struct dirent * de);
+void listDir(char * filePath, char * userFilter, int * timeFilter);
+void printData(char * dirPath, struct dirent * de, char * userFilter, int * timeFilter);
 char getType(struct stat sb);
 char * getPermissions(struct stat sb);
 char * getUser(struct stat sb);
 char * getGroup(struct stat sb);
+int toDisplay(struct stat sb, char * userFilter, int * timeFilter);
 
 int main(int argc, char **argv) {
 
     int opt;
+    char * userFilter;
+    int timeFilter;
+    int * pTimeFilter = NULL;
+
     while ((opt = getopt(argc, argv, "u:m:")) != -1) {
         switch (opt) {
             case 'u':
-                printf("Handle %c option for %s\n", opt, optarg);
+                userFilter = optarg;
                 break;
             case 'm':
-                printf("Handle %c option for %s\n", opt, optarg);
+                timeFilter = atoi(optarg);
+                pTimeFilter = &timeFilter;
                 break;
             default:
                 exit(1);
@@ -36,12 +42,12 @@ int main(int argc, char **argv) {
 
     char * startingPath = argv[argc - 1];
 
-    listDir(startingPath);
+    listDir(startingPath, userFilter, pTimeFilter);
 
     return 0;
 }
 
-void listDir(char * dirPath) {
+void listDir(char * dirPath, char * userFilter, int * timeFilter) {
     if (dirPath[strlen(dirPath) - 1] != '/') {
         strcat(dirPath, "/");
     }
@@ -50,7 +56,7 @@ void listDir(char * dirPath) {
 
     DIR * dirp = opendir(dirPath);
     if (!dirp) {
-        printf("Cannot open directory %s:%s\n", dirPath, strerror(errno));
+        printf("Cannot open directory %s: %s\n", dirPath, strerror(errno));
     }
     struct dirent * de;
 
@@ -74,8 +80,10 @@ void listDir(char * dirPath) {
             }
         }
 
-        printData(dirPath, de);
+        printData(dirPath, de, userFilter, timeFilter);
     }
+
+    printf("\n");
 
     // Loop through dirArray and listDir for each one
     int i = 0;
@@ -84,7 +92,7 @@ void listDir(char * dirPath) {
         char * tempPath = malloc(sizeof (char) * (strlen(tempDirPath) + strlen(dirArray[i]) + 2));
         tempPath = strcat(tempDirPath, dirArray[i]);
         //printf("Recursively listing %s\n", dirArray[i]);
-        listDir(tempPath);
+        listDir(tempPath, userFilter, timeFilter);
         //free(tempPath);
 
         ++i;
@@ -98,7 +106,7 @@ void listDir(char * dirPath) {
     dirCount = 0;
 }
 
-void printData(char * dirPath, struct dirent * de) {
+void printData(char * dirPath, struct dirent * de, char * userFilter, int * timeFilter) {
     char * path = malloc(strlen(dirPath) + strlen(de->d_name) + 1);
     strcpy(path, dirPath);
     strcat(path, de->d_name);
@@ -107,6 +115,11 @@ void printData(char * dirPath, struct dirent * de) {
     if (lstat(path, &sb) == -1) {
         printf("stat failed: %s\n", strerror(errno));
         exit(1);
+    }
+
+    // Filter results
+    if (!toDisplay(sb, userFilter, timeFilter)) {
+        return;
     }
 
     // Print info appropriately
@@ -128,6 +141,17 @@ void printData(char * dirPath, struct dirent * de) {
     printf("%04d-%02d-%02d %02d:%02d:%02d\t", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
 
     printf("%s", path);
+
+    // Print link contents if symlink
+    if (getType(sb) == 'l') {
+        char * buf = malloc(256);
+        if (readlink(path, buf, 256) == -1) {
+            printf("\nreadlink failed: %s\n", strerror(errno));
+            exit(1);
+        }
+        printf("\t%s", buf);
+    }
+
     printf("\n");
 }
 
@@ -250,4 +274,46 @@ char * getGroup(struct stat sb) {
     }
 
     return gr->gr_name;
+}
+
+int toDisplay(struct stat sb, char * userFilter, int * timeFilter) {
+    int proceed = 1;
+
+    if (!userFilter) {
+        proceed &= 1;
+    } else {
+        int user;
+        if (!(user = atoi(userFilter))) {
+            user = (int)getpwnam(userFilter)->pw_uid;
+        }
+
+        if (user == sb.st_uid) {
+            proceed &= 1;
+        } else {
+            proceed &= 0;
+        }
+    }
+
+    if (!timeFilter) {
+        proceed &= 1;
+    } else {
+        int utime = *timeFilter;
+        int now = (int)time(0);
+
+        if (utime > 0) {
+            if ((int)sb.st_mtime < (now - utime)) {
+                proceed &= 1;
+            } else {
+                proceed &= 0;
+            }
+        } else if (utime < 0) {
+            if ((int)sb.st_mtime > (now + utime)) {
+                proceed &= 1;
+            } else {
+                proceed &= 0;
+            }
+        }
+    }
+
+    return proceed;
 }
