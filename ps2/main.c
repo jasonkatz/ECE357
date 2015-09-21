@@ -7,11 +7,16 @@
 #include <dirent.h>
 #include <string.h>
 #include <errno.h>
+#include <pwd.h>
+#include <grp.h>
+#include <time.h>
 
 void listDir(char * filePath);
 void printData(char * dirPath, struct dirent * de);
 char getType(struct stat sb);
 char * getPermissions(struct stat sb);
+char * getUser(struct stat sb);
+char * getGroup(struct stat sb);
 
 int main(int argc, char **argv) {
 
@@ -104,9 +109,25 @@ void printData(char * dirPath, struct dirent * de) {
         exit(1);
     }
 
+    // Print info appropriately
     printf("%04X/%d\t", (int)sb.st_dev, (int)sb.st_ino);
     printf("%c%s\t", getType(sb), getPermissions(sb));
-    printf("%s", de->d_name);
+    printf("%d\t", sb.st_nlink);
+    printf("%s\t", getUser(sb));
+    printf("%s\t", getGroup(sb));
+
+    // Print size or raw device number
+    if (getType(sb) == 'm' || getType(sb) == 'M') {
+        printf("%X\t", (int)sb.st_rdev);
+    } else {
+        printf("%d\t", sb.st_size);
+    }
+
+    // Print last modification time
+    struct tm * t = localtime(&(sb.st_mtim.tv_sec));
+    printf("%04d-%02d-%02d %02d:%02d:%02d\t", t->tm_year + 1900, t->tm_mon + 1, t->tm_mday, t->tm_hour, t->tm_min, t->tm_sec);
+
+    printf("%s", path);
     printf("\n");
 }
 
@@ -205,4 +226,28 @@ char * getPermissions(struct stat sb) {
 
 
     return result;
+}
+
+char * getUser(struct stat sb) {
+    struct passwd * pw;
+
+    if (!(pw = getpwuid(sb.st_uid))) {
+        char * str = malloc(16);
+        sprintf(str, "%d", (int)sb.st_uid);
+        return str;
+    }
+
+    return pw->pw_name;
+}
+
+char * getGroup(struct stat sb) {
+    struct group * gr;
+
+    if (!(gr = getgrgid(sb.st_gid))) {
+        char * str;
+        sprintf(str, "%d", (int)sb.st_gid);
+        return str;
+    }
+
+    return gr->gr_name;
 }
