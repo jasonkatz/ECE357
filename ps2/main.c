@@ -52,8 +52,6 @@ void listDir(char * dirPath, char * userFilter, int * timeFilter) {
         strcat(dirPath, "/");
     }
 
-    //printf("Listing: %s\n", dirPath);
-
     DIR * dirp = opendir(dirPath);
     if (!dirp) {
         printf("Cannot open directory %s: %s\n", dirPath, strerror(errno));
