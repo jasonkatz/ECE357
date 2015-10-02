@@ -16,12 +16,22 @@ int getCommandArgCount(char ** args, int count);
 int getRedirectArgCount(char ** args, int count);
 
 int main(int argc, char ** argv) {
-    FILE * fp = stdin;
+    FILE * fp;
     char * line = NULL;
     size_t len = 0;
     ssize_t read;
 
+    // Handle shell scripting
+    if (argc == 1) {
+        fp = stdin;
+    } else {
+        fp = fopen(argv[1], "r");
+    }
+
     while ((read = getline(&line, &len, fp)) != -1) {
+        if (line[0] == '#') {
+            continue;
+        }
         executeCommand(line, argv, argc);
     }
 
@@ -81,6 +91,14 @@ int executeCommand(char * line, char ** argv, int argc) {
         }
     }
     printf("\"\n");
+
+    // Set up timer
+    struct timeval start_time;
+    struct timeval end_time;
+    if (gettimeofday(&start_time, NULL) < 0) {
+        fprintf(stderr, "Error getting start time: %s\n", strerror(errno));
+        exit(1);
+    }
 
     // Fork process
     pid_t pid;
@@ -144,12 +162,21 @@ int executeCommand(char * line, char ** argv, int argc) {
             exit(1);
             break;
         default:
-            //printf("In parent, pid is %d\n", (int)pid);
-
             if (wait3(&status, 0, &ru) < 0) {
-                fprintf(stderr, "Wait3 error %s", strerror(errno));
+                fprintf(stderr, "Wait3 error: %s\n", strerror(errno));
                 exit(1);
             }
+
+            if (gettimeofday(&end_time, NULL) < 0) {
+                fprintf(stderr, "Error getting end time: %s\n", strerror(errno));
+                exit(1);
+            }
+
+            int realsecdiff = end_time.tv_sec - start_time.tv_sec;
+            int realmicrodiff = end_time.tv_usec - start_time.tv_usec;
+            printf("Command returned with return code %d,\n", WEXITSTATUS(status));
+            printf("consuming %01d.%03d real seconds, %01d.%03d user, %01d.%03d system.\n",
+                    realsecdiff, realmicrodiff, ru.ru_utime.tv_sec, ru.ru_utime.tv_usec, ru.ru_stime.tv_sec, ru.ru_stime.tv_usec);
 
             break;
     }
