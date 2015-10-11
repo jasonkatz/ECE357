@@ -1,0 +1,5 @@
+#!/home/pi/projects/school/ece357/ps3/main.c
+pwd
+ls /home/pi/projects/school/
+ls /home/pi/projects/school/ece357/ps2
+/home/pi/projects/school/ece357/ps2/walker /home/pi/projects/school/ece165

@@ -155,6 +155,7 @@ int executeCommand(char * line, char ** argv, int argc) {
             }
 
             execvp(args[0], commandArgs);
+            free(args);
             break;
         }
         case -1:

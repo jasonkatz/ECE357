@@ -1,0 +1,5 @@
+total 24
+-rw-r--r-- 1 pi pi  8076 Oct  2 05:46 main.c
+-rwxr-xr-x 1 pi pi 11208 Oct  2 05:46 mysh
+-rw-r--r-- 1 pi pi   192 Oct  2 05:47 script.mysh
+-rw------- 1 pi pi     0 Oct  2 05:51 testout
