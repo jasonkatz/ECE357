@@ -16,6 +16,8 @@ int main(int argc, char ** argv) {
     int i;
     int bufferSize = 4096; // Default buffer size 4kb
 
+    char * pattern = argv[1];
+
     char ** inputFiles = argv;
     int numInputFiles = argc - 2; // First two elements of argv are command string and pattern
 
@@ -76,7 +78,7 @@ int main(int argc, char ** argv) {
                 close(pipe2fds[1]);
 
                 // Exec the child grep process
-                char * args[3] = { commands[0], argv[1], 0 };
+                char * args[3] = { commands[0], pattern, 0 };
                 execvp(commands[0], args);
                 break;
             }
