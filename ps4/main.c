@@ -51,6 +51,7 @@ int main(int argc, char ** argv) {
 
     // Loop through input files
     for (i = 0; i < numInputFiles; ++i) {
+        printf("Processing %d/%d: %s\n", i + 1, numInputFiles, inputFiles[i]);
         pipeFile(inputFiles[i], pattern, &totalBytes, &totalFiles);
     }
 
@@ -60,12 +61,9 @@ int main(int argc, char ** argv) {
 void pipeFile(char * fileName, char * pattern, int * totalBytes, int * totalFiles) {
     ++(*totalFiles);
 
-    pid_t pid1;
-    pid_t pid2;
-    int status1;
-    int status2;
-    struct rusage ru1;
-    struct rusage ru2;
+    pid_t pid1, pid2;
+    int status;
+    struct rusage ru;
 
     if (setjmp(int_jb) != 0) {
         fprintf(stderr, "Interruped!\nTotal files processed: %d\nTotal bytes processed: %d\n", (*totalFiles), (*totalBytes));
@@ -73,14 +71,12 @@ void pipeFile(char * fileName, char * pattern, int * totalBytes, int * totalFile
         exit(1);
     }
 
-    // Create pipe 1
+    // Create pipes
     int pipe1fds[2], pipe2fds[2];
     if (pipe(pipe1fds) < 0) {
         fprintf(stderr, "Can't create pipe 1 for input file %s: %s\n", fileName, strerror(errno));
         exit(1);
     }
-
-    // Create pipe 2
     if (pipe(pipe2fds) < 0) {
         fprintf(stderr, "Can't create pipe 2 for input file %s: %s\n", fileName, strerror(errno));
         exit(1);
@@ -129,40 +125,6 @@ void pipeFile(char * fileName, char * pattern, int * totalBytes, int * totalFile
             // Close dangling file descriptors
             close(pipe1fds[0]);
 
-            // Open file
-            int infd;
-            if ((infd = open(fileName, O_RDONLY, 0777)) < 0) {
-                fprintf(stderr, "File open error (%s): %s\n", fileName, strerror(errno));
-                exit(1);
-            }
-            // Read from the file
-            int byteNum;
-            char buf[bufferSize];
-            while ((byteNum = read(infd, buf, bufferSize)) > 0) {
-                int wrstatus = write(pipe1fds[1], buf, byteNum);
-                if (wrstatus <= 0) {
-                    fprintf(stderr, "Write error on fd %d: %s\n", pipe1fds[1], strerror(errno));
-                    exit(1);
-                } else if (wrstatus < byteNum) {
-                    // Write to stdout and retry write on partial write
-                    printf("Partial write from buffer to stdout\n");
-                    write(pipe1fds[1], buf, byteNum - wrstatus);
-                }
-                (*totalBytes) += wrstatus;
-            }
-
-            if (byteNum < 0) {
-                fprintf(stderr, "Read error on file %s: %s\n", fileName, strerror(errno));
-                exit(1);
-            }
-
-            // Close output file
-            close(pipe1fds[1]);
-
-            if (wait3(&status1, 0, &ru1) < 0) {
-                fprintf(stderr, "Wait3 error: %s\n", strerror(errno));
-                exit(1);
-            }
             break;
         }
     }
@@ -196,7 +158,38 @@ void pipeFile(char * fileName, char * pattern, int * totalBytes, int * totalFile
             close(pipe2fds[0]);
             close(pipe2fds[1]);
 
-            if (wait3(&status2, 0, &ru2) < 0) {
+            // Open file
+            int infd;
+            if ((infd = open(fileName, O_RDONLY, 0777)) < 0) {
+                fprintf(stderr, "File open error (%s): %s\n", fileName, strerror(errno));
+                exit(1);
+            }
+            // Read from the file
+            int byteNum;
+            char buf[bufferSize];
+            while ((byteNum = read(infd, buf, bufferSize)) > 0) {
+                int wrstatus = write(pipe1fds[1], buf, byteNum);
+                fprintf(stderr, "%d/%d bytes written\n", wrstatus, byteNum);
+                if (wrstatus <= 0) {
+                    fprintf(stderr, "Write error on fd %d: %s\n", pipe1fds[1], strerror(errno));
+                    exit(1);
+                } else if (wrstatus < byteNum) {
+                    // Write to stdout and retry write on partial write
+                    fprintf(stderr, "Partial write from buffer to stdout\n");
+                    write(pipe1fds[1], buf, byteNum - wrstatus);
+                }
+                (*totalBytes) += wrstatus;
+            }
+
+            if (byteNum < 0) {
+                fprintf(stderr, "Read error on file %s: %s\n", fileName, strerror(errno));
+                exit(1);
+            }
+
+            // Close output file
+            close(pipe1fds[1]);
+
+            if (wait3(&status, 0, &ru) < 0) {
                 fprintf(stderr, "Wait3 error: %s\n", strerror(errno));
                 exit(1);
             }
