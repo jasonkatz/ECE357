@@ -1,2 +1,2 @@
 build:
-	gcc main.c tas64.S
+	gcc tasTest.c tas64.S
