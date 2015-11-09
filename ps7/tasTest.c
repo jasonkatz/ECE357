@@ -54,7 +54,7 @@ int main(int argc, char ** argv) {
     int i;
     int inFork = 0;
     int status;
-    char spinlock = 0;
+    map[1] = 0;
     struct rusage ru;
     for (i = 0; i < N_PROC; ++i) {
         pid_t pid;
@@ -62,11 +62,11 @@ int main(int argc, char ** argv) {
             case 0: {
                 inFork = 1;
                 int j;
-                for (j = 0; j < 10000000; ++j) {
-                    while (tas(&spinlock) != 0)
+                for (j = 0; j < 1000000; ++j) {
+                    while (tas(&map[1]) != 0)
                         ;
                     map[0] += 1;
-                    spinlock = 0;
+                    map[1] = 0;
                 }
                 break;
             }
