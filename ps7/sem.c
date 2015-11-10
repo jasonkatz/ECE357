@@ -15,30 +15,51 @@ void sem_init(struct sem * s, int count) {
 }
 
 int sem_try(struct sem * s) {
-    return !(tas(&s->lock) && s->count > 0);
-}
+    while (tas(&s->lock))
+        ;
 
-void sem_wait(struct sem * s) {
-    // Block all signals except SIGUSR1 if in waiting state
-    sigset_t old_mask, new_mask;
-    sigemptyset(&new_mask);
-    sigaddset(&new_mask, SIGUSR1);
-    sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
-    while (!sem_try(s)) {
-        // Set the corresponding pid in procs
-        s->procs[my_procnum] = getpid();
-        sigsuspend(&old_mask);
+    if (s->count) {
+        s->count--;
     }
-    s->procs[my_procnum] = 0; // Don't forget to reset the procs flag
-    sigprocmask(SIG_UNBLOCK, &old_mask, NULL);
-
-    // Decrement
-    s->count--;
 
     s->lock = 0;
+
+    return (s->count + 1 > 0);
+}
+
+void usr1_handler(int signum) { }
+
+void sem_wait(struct sem * s) {
+    s->procs[my_procnum] = getpid(); // Set procs flag to indicate waiting state
+
+    for (;;) {
+        while (tas(&(s->lock)))
+            ;
+
+        // Block all signals but SIGUSR1 (handle SIGUSR1)
+        sigset_t old_mask, new_mask;
+        sigfillset(&new_mask);
+        sigdelset(&new_mask, SIGUSR1);
+        signal(SIGUSR1, usr1_handler);
+        sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
+
+        if (s->count) {
+            s->procs[my_procnum] = 0;
+            s->count--;
+            s->lock = 0;
+            return;
+        }
+
+        s->lock = 0;
+        sigsuspend(&new_mask);
+        sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+    }
 }
 
 void sem_inc(struct sem * s) {
+    while (tas(&s->lock))
+        ;
+
     s->count++;
 
     // Wake all sleeping processes with SIGUSR1
@@ -46,7 +67,8 @@ void sem_inc(struct sem * s) {
     for (i = 0; i < N_PROC; ++i) {
         if (s->procs[i]) {
             kill(s->procs[i], SIGUSR1);
-            s->procs[i] = 0;
         }
     }
+
+    s->lock = 0;
 }

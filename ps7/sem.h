@@ -13,14 +13,14 @@ struct sem {
  * once in the program (per semaphore). If called after the
  * semaphore has been used, results are unpredictable.
  */
-void sem_init(struct sem *s, int count);
+void sem_init(struct sem * s, int count);
 
 /*
  * Attempt to perform the "P" operation (atomically decrement
  * the semaphore). If this operation would block, return 0,
  * otherwise return 1.
  */
-int sem_try(struct sem *s);
+int sem_try(struct sem * s);
 
 /*
  * Perform the P operation, blocking until successful. Blocking
@@ -37,11 +37,11 @@ int sem_try(struct sem *s);
  * such memory will be private to a specific process and not in the
  * shared memory pool :(
  */
-void sem_wait(struct sem *s);
+void sem_wait(struct sem * s);
 
 /*
  * Perform the V operation. If any other processors were sleeping
  * on this semaphore, wake them by sending a SIGUSR1 to their
  * process id (which is not the same as the virtual processor number).
  */
-void sem_inc(struct sem *s);
+void sem_inc(struct sem * s);

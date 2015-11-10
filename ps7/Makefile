@@ -1,5 +1,5 @@
-1:
+tas:
 	gcc tasTest.c tas64.S
 
-semaphore:
-	gcc semTest.c sem.c tas64.S
+fifo:
+	gcc fifoTest.c sem.c tas64.S
