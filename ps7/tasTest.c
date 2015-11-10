@@ -16,7 +16,7 @@
 int N_PROC = 64;
 int * map;
 
-int tas(volatile char *lock);
+int tas(volatile int *lock);
 
 void readFile();
 
@@ -62,7 +62,7 @@ int main(int argc, char ** argv) {
             case 0: {
                 inFork = 1;
                 int j;
-                for (j = 0; j < 1000000; ++j) {
+                for (j = 0; j < 100000; ++j) {
                     while (tas(&map[1]) != 0)
                         ;
                     map[0] += 1;
