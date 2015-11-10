@@ -1,10 +1,11 @@
-static int N_PROC = 64;
+#define N_PROC 64
+
 int my_procnum;
 
 struct sem {
     char lock;
     int count;
-    int * procs; // Use an array of integers to keep track of waiting process ids
+    int procs[N_PROC]; // Use an array of integers to keep track of waiting process ids
 };
 
 /*

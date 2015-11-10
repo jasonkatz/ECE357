@@ -11,7 +11,11 @@ void sem_init(struct sem * s, int count) {
     s->count = count;
     s->lock = 0;
 
-    s->procs = (int *)malloc(N_PROC * sizeof(int *));
+    // Set procs array to zeroes
+    int i;
+    for (i = 0; i < N_PROC; ++i) {
+        s->procs[i] = 0;
+    }
 }
 
 int sem_try(struct sem * s) {
@@ -37,13 +41,14 @@ void sem_wait(struct sem * s) {
             ;
 
         // Block all signals but SIGUSR1 (handle SIGUSR1)
+        signal(SIGUSR1, usr1_handler);
         sigset_t old_mask, new_mask;
         sigfillset(&new_mask);
+        sigdelset(&new_mask, SIGINT);
         sigdelset(&new_mask, SIGUSR1);
-        signal(SIGUSR1, usr1_handler);
         sigprocmask(SIG_BLOCK, &new_mask, &old_mask);
 
-        if (s->count) {
+        if (s->count > 0) {
             s->procs[my_procnum] = 0;
             s->count--;
             s->lock = 0;

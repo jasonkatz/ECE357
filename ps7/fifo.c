@@ -1,4 +1,6 @@
 #include "fifo.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 void fifo_init(struct fifo * f) {
     sem_init(&(f->access_lock), 1); // Access lock should start with 1 resource (the lock)
@@ -10,8 +12,8 @@ void fifo_init(struct fifo * f) {
 }
 
 void fifo_wr(struct fifo * f, unsigned long d) {
-    sem_wait(&(f->access_lock)); // Wait for available access
     sem_wait(&(f->wr_sem)); // Wait for available write resource
+    sem_wait(&(f->access_lock)); // Wait for available access
 
     // Insert new element at front of fifo
     f->buffer[f->front++] = d;
@@ -23,8 +25,8 @@ void fifo_wr(struct fifo * f, unsigned long d) {
 }
 
 unsigned long fifo_rd(struct fifo * f) {
-    sem_wait(&(f->access_lock)); // Wait for available access
     sem_wait(&(f->rd_sem)); // Wait for available read resource
+    sem_wait(&(f->access_lock)); // Wait for available access
 
     // Remove element from end of fifo
     unsigned long val = f->buffer[f->end++];
