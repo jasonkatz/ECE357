@@ -1,3 +1,5 @@
+#include "sem.h"
+
 #define MYFIFO_BUFSIZ 4096
 
 struct fifo {
