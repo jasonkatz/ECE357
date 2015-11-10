@@ -19,6 +19,7 @@ void test1();
 void test2();
 
 struct fifo * f;
+int longs_per_writer = 10000;
 
 int main(int argc, char ** argv) {
 
@@ -65,7 +66,7 @@ void test1() {
             // Writer
             my_procnum = 0;
             unsigned long i;
-            for (i = 0; i < 10000; ++i) {
+            for (i = 0; i < longs_per_writer; ++i) {
                 fifo_wr(f, i);
             }
             return;
@@ -77,11 +78,71 @@ void test1() {
     my_procnum = 1;
     int success = 1;
     unsigned long i;
-    for (i = 0; i < 10000; ++i) {
+    for (i = 0; i < longs_per_writer; ++i) {
         success &= (i == fifo_rd(f));
     }
     printf("Result: %d\n", success);
 }
 
 void test2() {
+    // Test 2: One reader and many writers
+    int numWriters = 10; // Must be <= 63 (due to the constraint on N_PROC)
+
+    pid_t pid;
+    switch (pid = fork()) {
+        case 0: {
+            // Create every writer process and set my_procnum appropriately
+            int i;
+            int inFork = 0;
+            my_procnum = numWriters; // This is for the lingering parent process that does the last write
+            for (i = 1; i < numWriters; ++i) {
+                pid_t pidi;
+                switch (pidi = fork()) {
+                    case 0: {
+                        my_procnum = i;
+                        inFork = 1;
+                        break;
+                    }
+                    case -1: {
+                        fprintf(stderr, "Couldn't fork writer: %s\n", strerror(errno));
+                        exit(1);
+                        break;
+                    }
+                    default: {
+                        break;
+                    }
+                }
+                // Don't continue if we are in a forked process
+                if (inFork) {
+                    break;
+                }
+            }
+            break;
+        }
+        case -1:
+            fprintf(stderr, "Couldn't fork process: %s\n", strerror(errno));
+            exit(1);
+            break;
+        default: {
+            // Reader
+            my_procnum = 0;
+            int success = 1;
+            unsigned long j;
+            for (j = 0; j < numWriters * longs_per_writer; ++j) {
+                unsigned long num = fifo_rd(f);
+                int writer = (int)(num >> 24); // Decode writer id
+                num -= writer << 24; // Decode number
+            }
+            printf("Result: %d\n", success);
+            return;
+            break;
+        }
+    }
+
+    // Writer
+    unsigned long j;
+    for (j = 0; j < longs_per_writer; ++j) {
+        unsigned long num = j | (my_procnum << 24); // Encode the writer id
+        fifo_wr(f, j);
+    }
 }
