@@ -19,7 +19,7 @@ void test1();
 void test2();
 
 struct fifo * f;
-int longs_per_writer = 10000;
+int longs_per_writer = 100;
 
 int main(int argc, char ** argv) {
 
@@ -86,7 +86,7 @@ void test1() {
 
 void test2() {
     // Test 2: One reader and many writers
-    int numWriters = 10; // Must be <= 63 (due to the constraint on N_PROC)
+    int numWriters = 56; // Must be <= 63 (due to the constraint on N_PROC)
 
     pid_t pid;
     switch (pid = fork()) {
@@ -126,14 +126,37 @@ void test2() {
         default: {
             // Reader
             my_procnum = 0;
-            int success = 1;
             unsigned long j;
+
+            // Keep track of last number read from each writer to check order
+            unsigned long trackers[numWriters];
+            // Initialize all trackers to 0
+            for (j = 0; j < numWriters; ++j) {
+                trackers[j] = 0;
+            }
+
             for (j = 0; j < numWriters * longs_per_writer; ++j) {
                 unsigned long num = fifo_rd(f);
                 int writer = (int)(num >> 24); // Decode writer id
-                num -= writer << 24; // Decode number
+                num -= ((unsigned long)writer << 24); // Decode number
+
+                // Check if tracker is not the current number (failure condition), and increment the tracker
+                if (trackers[writer - 1]++ != num) {
+                    fprintf(stderr, "Test failed:\n");
+                    fprintf(stderr, "Iteration %lu\n", j);
+                    fprintf(stderr, "Writer %d: Num = %lu\n", writer - 1, num);
+                    fprintf(stderr, "Trackers: ");
+                    int k;
+                    for (k = 0; k < numWriters; ++k) {
+                        fprintf(stderr, "%lu\t", trackers[k]);
+                    }
+                    fprintf(stderr, "\n");
+                    return;
+                }
             }
-            printf("Result: %d\n", success);
+
+            // If we get to this point, the test was successful!
+            printf("Success!\n");
             return;
             break;
         }
@@ -142,7 +165,8 @@ void test2() {
     // Writer
     unsigned long j;
     for (j = 0; j < longs_per_writer; ++j) {
-        unsigned long num = j | (my_procnum << 24); // Encode the writer id
-        fifo_wr(f, j);
+        unsigned long num = j + (my_procnum << 24); // Encode the writer id
+        //printf("%d\t", my_procnum << 24);
+        fifo_wr(f, num);
     }
 }
