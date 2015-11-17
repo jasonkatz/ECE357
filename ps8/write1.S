@@ -1,7 +1,5 @@
 .global _start
 
-.text
-
 _start:
     movq    $1, %rax        # Move 1 (write) into %rax register
     movq    $1, %rdi        # Pass 1 (stdout) as 1st param to write
