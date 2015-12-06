@@ -14,6 +14,9 @@ int sched_fork() {
     if ((newsp = mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0)) < 0) {
         fprintf(stderr, "mmap failed: %s\n", strerror(errno));
     }
+
+    // Copy current stack to new stack
+    memcpy(newsp, current->stack, STACK_SIZE);
 }
 
 int sched_exit(int code) {
