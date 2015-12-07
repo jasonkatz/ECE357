@@ -229,7 +229,14 @@ int sched_wait(int * exit_code) {
     return 0;
 }
 
-int sched_nice(int niceval) {
+void sched_nice(int niceval) {
+    if (niceval > 19) {
+        niceval = 19;
+    } else if (niceval < -20) {
+        niceval = -20;
+    }
+
+    current->niceval = niceval;
 }
 
 int sched_getpid() {
@@ -258,8 +265,17 @@ void sched_switch() {
     // Block all signals (critical region)
     sigprocmask(SIG_BLOCK, &block_mask, NULL);
 
+    // Update all priorities
+    int i;
+    for (i = 0; i < SCHED_NPROC; ++i) {
+        if (running->procs[i]) {
+            int temp = running->procs[i]->niceval + 20 - (running->procs[i]->total_ticks / (running->procs[i]->niceval + 20));
+            running->procs[i]->priority = temp;
+        }
+    }
+
     // Select the READY task with the highest priority
-    int i, highest_priority = 0, highest_priority_index = -1;
+    int highest_priority = 0, highest_priority_index = -1;
     for (i = 0; i < SCHED_NPROC; ++i) {
         // Only look at processes in the READY state
         if (running->procs[i] && running->procs[i]->state == SCHED_READY) {
@@ -278,6 +294,7 @@ void sched_switch() {
     // Check for case where the current process is also the highest priority
     if (running->procs[highest_priority_index]->pid == current->pid) {
         fprintf(stderr, "Highest priority process is also current; nothing changes\n");
+        current->state = SCHED_READY;
         return;
     }
 
@@ -299,5 +316,5 @@ void sched_switch() {
 void sched_tick() {
     ++(current->total_ticks);
     ++tick_count;
-    printf("tick %ld\n", tick_count);
+    sched_switch();
 }

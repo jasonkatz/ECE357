@@ -98,7 +98,7 @@ int sched_wait(int * exit_code);
  * priority) to -20 (most preferred). Clamp any out-of-range
  * values to those limits.
  */
-int sched_nice(int niceval);
+void sched_nice(int niceval);
 
 /* return current task's pid */
 int sched_getpid();
