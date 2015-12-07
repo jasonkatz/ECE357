@@ -1,20 +1,6 @@
-struct sched_proc {
-    /* use this for each simulated task */
-    /* internals are up to you */
-    /* probably should include things like the tast state */
-    /* priority, accumulated, cpu time, stack address, etc. */
-    int state;
-    int static_priority;
-    int dynamic_priority;
-    int total_ticks; // MAY HAVE TO MAKE THIS LONG?
-    void * stack;
-}
+#include "jmpbuf-offsets64.h"
 
-struct sched_waitq {
-    /* use this for each event/wakeup queue */
-    /* internals are up to you */
-}
-#define SCHED_NPROC     1024
+#define SCHED_NPROC     1023
 
 #define SCHED_READY     100
 #define SCHED_RUNNING   200
@@ -22,6 +8,33 @@ struct sched_waitq {
 #define SCHED_ZOMBIE    400
 
 #define STACK_SIZE      65536
+
+struct savectx {
+    void * regs[JB_SIZE];
+};
+
+struct sched_proc {
+    /* use this for each simulated task */
+    /* internals are up to you */
+    /* probably should include things like the task state */
+    /* priority, accumulated cpu time, stack address, etc. */
+    int pid, ppid;
+    int state;
+    int priority;
+    int niceval;
+    long total_ticks;
+    void * stack;
+    struct savectx ctx;
+};
+
+struct sched_waitq {
+    /* use this for each event/wakeup queue */
+    /* internals are up to you */
+    void * procs[SCHED_NPROC];
+};
+
+// Finds and returns the lowest available pid
+int nextpid();
 
 /*
  * This function will be called once by the testbed program.
@@ -92,8 +105,7 @@ int sched_getpid();
 int sched_getppid();
 
 /* return the number of timer ticks since startup */
-// MAY HAVE TO MAKE THIS LONG?
-int sched_gettick();
+long sched_gettick();
 
 /* output to stdout a listing of all of the current tasks,
  * including sleeping and zombie tasks. List the
