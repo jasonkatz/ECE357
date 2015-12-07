@@ -20,11 +20,15 @@ void func() {
             exit(1);
             break;
         case 0:
-            printf("in parent\n");
+            printf("in child\n");
+            sched_exit(2);
             break;
         default:
-            printf("in child\n");
+            printf("in parent\n");
             break;
     };
+
+    int code;
+    sched_wait(&code);
     exit(0);
 }

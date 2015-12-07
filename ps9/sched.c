@@ -109,7 +109,7 @@ int sched_fork() {
     new_proc->state = SCHED_READY;
     new_proc->priority = 20;
     new_proc->niceval = 0;
-    new_proc->total_ticks = 0;
+    new_proc->total_ticks = parent->total_ticks;
 
     // Create new stack area
     void * newsp;
@@ -148,10 +148,85 @@ int sched_fork() {
     return returnval;
 }
 
-int sched_exit(int code) {
+void sched_exit(int code) {
+    // Block all signals (critical region)
+    sigprocmask(SIG_BLOCK, &block_mask, NULL);
+
+    --proc_count;
+    current->state = SCHED_ZOMBIE;
+    current->exit_code = code;
+
+    // Wake up a sleeping parent, if there is one
+    int i;
+    for (i = 0; i < SCHED_NPROC; ++i) {
+        if (running->procs[i] && running->procs[i]->pid == current->ppid && running->procs[i]->state == SCHED_SLEEPING) {
+            current = running->procs[i];
+            current->state = SCHED_RUNNING;
+            // Return the exit code to the parent
+            restorectx(&(current->ctx), 1);
+        }
+    }
+
+    // Unblock all signals (end of critical region)
+    sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
+
+    sched_switch();
 }
 
 int sched_wait(int * exit_code) {
+    // Block all signals (critical region)
+    sigprocmask(SIG_BLOCK, &block_mask, NULL);
+
+    // Check for children
+    int i;
+    int found_child = 0;
+    for (i = 0; i < SCHED_NPROC; ++i) {
+        if (running->procs[i] && running->procs[i]->ppid == current->pid) {
+            found_child = 1;
+            break;
+        }
+    }
+    if (!found_child) {
+        fprintf(stderr, "No child to wait for\n");
+        return -1;
+    }
+
+    // Wait until we get a zombie child
+    struct sched_proc * zombie_child;
+    for (;;) {
+        // Check for zombie children
+        int found_zombie = 0;
+        for (i = 0; i < SCHED_NPROC; ++i) {
+            if (running->procs[i] && running->procs[i]->ppid == current->pid && running->procs[i]->state == SCHED_ZOMBIE) {
+                found_zombie = 1;
+                zombie_child = running->procs[i];
+                break;
+            }
+        }
+        if (found_zombie) {
+            // Get rid of zombie process memory
+            free(running->procs[i]);
+            running->procs[i] = NULL;
+
+            // Stop waiting if zombie found
+            break;
+        }
+
+        // Sleep if no zombie
+        current->state = SCHED_SLEEPING;
+        
+        // Unblock signals, switch processes, then reblock signals
+        sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
+        sched_switch();
+        sigprocmask(SIG_BLOCK, &block_mask, NULL);
+    }
+
+    *exit_code = zombie_child->exit_code;
+
+    // Unblock all signals (end of critical region)
+    sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
+
+    return 0;
 }
 
 int sched_nice(int niceval) {
@@ -170,9 +245,55 @@ long sched_gettick() {
 }
 
 void sched_ps() {
+    fprintf(stdout, "pid\tppid\tcurrent state\tstack addr\tniceval\tpriority\ttotal CPU time (ticks)\n");
+
+    int i;
+    for (i = 0; i < SCHED_NPROC; ++i) {
+        struct sched_proc * proc = running->procs[i];
+        fprintf(stdout, "%d\t%d\t%d\t%p\t%d\t%d\t%ld\n", proc->pid, proc->ppid, proc->state, proc->stack, proc->niceval, proc->priority, proc->total_ticks);
+    }
 }
 
 void sched_switch() {
+    // Block all signals (critical region)
+    sigprocmask(SIG_BLOCK, &block_mask, NULL);
+
+    // Select the READY task with the highest priority
+    int i, highest_priority = 0, highest_priority_index = -1;
+    for (i = 0; i < SCHED_NPROC; ++i) {
+        // Only look at processes in the READY state
+        if (running->procs[i] && running->procs[i]->state == SCHED_READY) {
+            // Select process with the highest priority
+            if (running->procs[i]->priority - running->procs[i]->niceval > highest_priority) {
+                highest_priority = running->procs[i]->priority - running->procs[i]->niceval;
+                highest_priority_index = i;
+            }
+        }
+    }
+    if (highest_priority_index == -1) {
+        fprintf(stderr, "No ready processes on wait queue\n");
+        return;
+    }
+
+    // Check for case where the current process is also the highest priority
+    if (running->procs[highest_priority_index]->pid == current->pid) {
+        fprintf(stderr, "Highest priority process is also current; nothing changes\n");
+        return;
+    }
+
+    struct sched_proc * best_proc = running->procs[highest_priority_index];
+    fprintf(stdout, "Switching to pid %d\n", best_proc->pid);
+
+    // Current process goes on the wait queue
+    // and context is switched to new process
+    if (!savectx(&(current->ctx))) {
+        best_proc->state = SCHED_RUNNING;
+        current = best_proc;
+        restorectx(&(current->ctx), 1);
+    }
+
+    // Unblock all signals (end of critical region)
+    sigprocmask(SIG_UNBLOCK, &block_mask, NULL);
 }
 
 void sched_tick() {

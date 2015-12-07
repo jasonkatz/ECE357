@@ -22,7 +22,9 @@ struct sched_proc {
     int state;
     int priority;
     int niceval;
+    int exit_code;
     long total_ticks;
+    long recent_start_time;
     void * stack;
     struct savectx ctx;
 };
@@ -30,7 +32,7 @@ struct sched_proc {
 struct sched_waitq {
     /* use this for each event/wakeup queue */
     /* internals are up to you */
-    void * procs[SCHED_NPROC];
+    struct sched_proc * procs[SCHED_NPROC];
 };
 
 // Finds and returns the lowest available pid
@@ -74,7 +76,7 @@ int sched_fork();
  * There will be no equivalent of SIGCHLD. sched_exit
  * will not return. Another runnable process will be scheduled.
  */
-int sched_exit(int code);
+void sched_exit(int code);
 
 /*
  * Return the exit code of a zombie child and free the
