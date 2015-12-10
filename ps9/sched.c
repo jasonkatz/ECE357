@@ -256,8 +256,11 @@ void sched_ps() {
 
     int i;
     for (i = 0; i < SCHED_NPROC; ++i) {
+        if (!running->procs[i]) {
+            continue;
+        }
         struct sched_proc * proc = running->procs[i];
-        fprintf(stdout, "%d\t%d\t%d\t%p\t%d\t%d\t%ld\n", proc->pid, proc->ppid, proc->state, proc->stack, proc->niceval, proc->priority, proc->total_ticks);
+        fprintf(stdout, "%d\t%d\t%d\t\t%p\t%d\t%d\t\t%ld\n", proc->pid, proc->ppid, proc->state, proc->stack, proc->niceval, proc->priority, proc->total_ticks);
     }
 }
 
@@ -274,6 +277,11 @@ void sched_switch() {
         }
     }
 
+    // Update the current state
+    if (current->state != SCHED_SLEEPING && current->state != SCHED_ZOMBIE) {
+        current->state = SCHED_READY;
+    }
+
     // Select the READY task with the highest priority
     int highest_priority = 0, highest_priority_index = -1;
     for (i = 0; i < SCHED_NPROC; ++i) {
@@ -287,13 +295,13 @@ void sched_switch() {
         }
     }
     if (highest_priority_index == -1) {
-        fprintf(stderr, "No ready processes on wait queue\n");
+        //fprintf(stderr, "No ready processes on wait queue\n");
         return;
     }
 
     // Check for case where the current process is also the highest priority
     if (running->procs[highest_priority_index]->pid == current->pid) {
-        fprintf(stderr, "Highest priority process is also current; nothing changes\n");
+        //fprintf(stderr, "Highest priority process is also current; nothing changes\n");
         current->state = SCHED_READY;
         return;
     }

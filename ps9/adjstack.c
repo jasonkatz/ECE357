@@ -29,7 +29,7 @@ adjstack(void *lim0,void *lim1,unsigned long adj)
     /* Now current bp (for adjstack fn) is in p */
     /* Unwind stack to get to saved ebp addr of caller */
     /* then begin adjustment process */
-    fprintf(stderr,"Asked to adjust child stack by %#lX bytes bet %p and %p\n",adj,lim0,lim1);
+    //fprintf(stderr,"Asked to adjust child stack by %#lX bytes bet %p and %p\n",adj,lim0,lim1);
     prev=*p;
     p= prev + adj;
     for(;;)
@@ -38,13 +38,13 @@ adjstack(void *lim0,void *lim1,unsigned long adj)
         new=prev+adj;
         if (new<lim0 || new>lim1)
         {
-            fprintf(stderr,"Enough already, saved BP @%p is %p\n",
-                        p,prev);
+            //fprintf(stderr,"Enough already, saved BP @%p is %p\n",
+            //            p,prev);
             break;
         }
         *p=new;
-        fprintf(stderr,"Adjusted saved bp @%p to %p\n",
-                p,*p);
+        //fprintf(stderr,"Adjusted saved bp @%p to %p\n",
+        //        p,*p);
         p=new;
     }
 }

@@ -1,34 +1,59 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 
 #include "sched.h"
 
-void func();
+void init();
+void child();
+
+void handle_int(int signum) {
+    sched_ps();
+    exit(1);
+}
+
+int numChildren = 5;
 
 int main(int argc, char ** argv) {
 
-    sched_init(func);
+    // On interrupt, print stats
+    signal(SIGINT, &handle_int);
+
+    sched_init(init);
 
     return 0;
 }
 
-void func() {
-    int pid;
-    switch(pid = sched_fork()) {
-        case -1:
-            fprintf(stderr, "Error forking process\n");
-            exit(1);
-            break;
-        case 0:
-            printf("in child\n");
-            sched_exit(2);
-            break;
-        default:
-            printf("in parent\n");
-            break;
-    };
+void init() {
+    int i;
+    for (i = 0; i < numChildren; ++i) {
+        int pid;
+        switch(pid = sched_fork()) {
+            case -1:
+                fprintf(stderr, "Error forking process\n");
+                exit(1);
+                break;
+            case 0:
+                child();
+                break;
+        };
+    }
 
     int code;
-    sched_wait(&code);
+    for (i = 0; i < numChildren; ++i) {
+        sched_wait(&code);
+        printf("Child with pid %d exited\n", code);
+    }
+    printf("done waiting\n");
     exit(0);
+}
+
+void child() {
+    long long i;
+    for (i = 0; i < 1000000000; ++i) {
+        if (i % 100000000 == 0) {
+            printf("Child with pid %d at %ld ticks\n", sched_getpid(), sched_gettick());
+        }
+    }
+    sched_exit(sched_getpid());
 }
