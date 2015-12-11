@@ -12,7 +12,7 @@ void handle_int(int signum) {
     exit(1);
 }
 
-int numChildren = 10;
+int numChildren = 4;
 
 int main(int argc, char ** argv) {
 
@@ -34,7 +34,7 @@ void init() {
                 exit(1);
                 break;
             case 0:
-                sched_nice((20 / numChildren) * (i - numChildren / 2));
+                sched_nice(i * 4);
                 child();
                 break;
         };

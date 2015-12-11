@@ -305,11 +305,12 @@ void sched_switch() {
 
     // Check for case where the current process is also the highest priority
     if (running->procs[highest_priority_index]->pid == current->pid) {
-        //fprintf(stderr, "Highest priority process is also current; nothing changes\n");
-        fprintf(stderr, "Remaining in process %d\n", current->pid);
+        //fprintf(stderr, "Remaining in process %d\n", current->pid);
         current->state = SCHED_READY;
         return;
     }
+
+    fprintf(stderr, "Switching at time %ld\n", tick_count);
 
     struct sched_proc * best_proc = running->procs[highest_priority_index];
     fprintf(stdout, "Switching to pid %d\n", best_proc->pid);
