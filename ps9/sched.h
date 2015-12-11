@@ -109,6 +109,9 @@ int sched_getppid();
 /* return the number of timer ticks since startup */
 long sched_gettick();
 
+/* return the number of timer ticks recorded on the current process */
+long sched_getcurrenttick();
+
 /* output to stdout a listing of all of the current tasks,
  * including sleeping and zombie tasks. List the
  * following information in tabular form:

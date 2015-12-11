@@ -12,7 +12,7 @@ void handle_int(int signum) {
     exit(1);
 }
 
-int numChildren = 5;
+int numChildren = 10;
 
 int main(int argc, char ** argv) {
 
@@ -34,6 +34,7 @@ void init() {
                 exit(1);
                 break;
             case 0:
+                sched_nice((20 / numChildren) * (i - numChildren / 2));
                 child();
                 break;
         };
@@ -52,7 +53,7 @@ void child() {
     long long i;
     for (i = 0; i < 1000000000; ++i) {
         if (i % 100000000 == 0) {
-            printf("Child with pid %d at %ld ticks\n", sched_getpid(), sched_gettick());
+            //printf("Child with pid %d at %ld ticks\n", sched_getpid(), sched_getcurrenttick());
         }
     }
     sched_exit(sched_getpid());

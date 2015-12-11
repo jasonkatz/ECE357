@@ -251,6 +251,10 @@ long sched_gettick() {
     return tick_count;
 }
 
+long sched_getcurrenttick() {
+    return current->total_ticks;
+}
+
 void sched_ps() {
     fprintf(stdout, "pid\tppid\tcurrent state\tstack addr\tniceval\tpriority\ttotal CPU time (ticks)\n");
 
@@ -272,7 +276,7 @@ void sched_switch() {
     int i;
     for (i = 0; i < SCHED_NPROC; ++i) {
         if (running->procs[i]) {
-            int temp = running->procs[i]->niceval + 20 - (running->procs[i]->total_ticks / (running->procs[i]->niceval + 20));
+            int temp = 20 - running->procs[i]->niceval - (running->procs[i]->total_ticks / (20 - running->procs[i]->niceval));
             running->procs[i]->priority = temp;
         }
     }
@@ -288,8 +292,8 @@ void sched_switch() {
         // Only look at processes in the READY state
         if (running->procs[i] && running->procs[i]->state == SCHED_READY) {
             // Select process with the highest priority
-            if (running->procs[i]->priority - running->procs[i]->niceval > highest_priority) {
-                highest_priority = running->procs[i]->priority - running->procs[i]->niceval;
+            if (running->procs[i]->priority > highest_priority) {
+                highest_priority = running->procs[i]->priority;
                 highest_priority_index = i;
             }
         }
@@ -302,12 +306,14 @@ void sched_switch() {
     // Check for case where the current process is also the highest priority
     if (running->procs[highest_priority_index]->pid == current->pid) {
         //fprintf(stderr, "Highest priority process is also current; nothing changes\n");
+        fprintf(stderr, "Remaining in process %d\n", current->pid);
         current->state = SCHED_READY;
         return;
     }
 
     struct sched_proc * best_proc = running->procs[highest_priority_index];
     fprintf(stdout, "Switching to pid %d\n", best_proc->pid);
+    sched_ps();
 
     // Current process goes on the wait queue
     // and context is switched to new process
