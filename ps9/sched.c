@@ -277,6 +277,9 @@ void sched_switch() {
     for (i = 0; i < SCHED_NPROC; ++i) {
         if (running->procs[i]) {
             int temp = 20 - running->procs[i]->niceval - (running->procs[i]->total_ticks / (20 - running->procs[i]->niceval));
+            if (temp <= 0) {
+                temp = 1;
+            }
             running->procs[i]->priority = temp;
         }
     }

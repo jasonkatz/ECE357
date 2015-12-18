@@ -51,7 +51,7 @@ void init() {
 
 void child() {
     long long i;
-    for (i = 0; i < 1000000000; ++i) {
+    for (i = 0; i < 5000000000; ++i) {
         if (i % 100000000 == 0) {
             //printf("Child with pid %d at %ld ticks\n", sched_getpid(), sched_getcurrenttick());
         }
